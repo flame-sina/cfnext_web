@@ -3,7 +3,7 @@ name: Sync upstream web zip
 on:
   schedule:
     # 每天 UTC 02:00，即北京时间 10:00
-    - cron: '0 3 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -31,23 +31,23 @@ jobs:
           curl -L --fail --retry 3 --retry-delay 2 -o /tmp/upstream/web.zip "$URL"
           unzip -tq /tmp/upstream/web.zip
 
-      - name: Unzip and locate index.html
+      - name: Unzip and locate _worker.js
         run: |
           set -euo pipefail
           rm -rf /tmp/upstream/unzipped
           mkdir -p /tmp/upstream/unzipped
           unzip -q /tmp/upstream/web.zip -d /tmp/upstream/unzipped
 
-          # 如果 zip 根目录就是 index.html，直接使用根目录；
-          # 如果 zip 内套了一层目录，则自动找到 index.html 所在目录。
-          if [ -f /tmp/upstream/unzipped/index.html ]; then
+          # 如果 zip 根目录就是 _worker.js，直接使用根目录；
+          # 如果 zip 内套了一层目录，则自动找到 _worker.js 所在目录。
+          if [ -f /tmp/upstream/unzipped/_worker.js ]; then
             SRC_DIR=/tmp/upstream/unzipped
           else
-            SRC_DIR=$(find /tmp/upstream/unzipped -name index.html -printf '%h\n' | head -n 1)
+            SRC_DIR=$(find /tmp/upstream/unzipped -name _worker.js -printf '%h\n' | head -n 1)
           fi
 
-          if [ -z "${SRC_DIR:-}" ] || [ ! -f "$SRC_DIR/index.html" ]; then
-            echo "::error::zip 内没有找到 index.html，无法同步"
+          if [ -z "${SRC_DIR:-}" ] || [ ! -f "$SRC_DIR/_worker.js" ]; then
+            echo "::error::zip 内没有找到 _worker.js，无法同步"
             exit 1
           fi
 
@@ -60,7 +60,7 @@ jobs:
           mkdir -p web
           cp -a "$SRC_DIR"/. web/
           rm -rf web/__MACOSX
-          test -f web/index.html
+          test -f web/_worker.js
 
       - name: Commit and push
         id: commit
