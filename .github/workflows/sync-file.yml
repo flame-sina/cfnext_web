@@ -23,9 +23,9 @@ jobs:
           SOURCE_OWNER: PAICNI
           SOURCE_REPO: CFNext
           SOURCE_BRANCH: main
-          SOURCE_PATH: 前后端分离版/CFNext-后端Worker版.js
+          SOURCE_PATH: 前后端分离版/CFNext-前端Pages版.zip
           TARGET_DIR: cloudflare
-          TARGET_PATH: cloudflare/Worker.js
+          TARGET_PATH: cloudflare/web.zip
         run: |
           set -e
           mkdir -p "$(dirname "$TARGET_PATH")"
@@ -58,5 +58,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: sync 前后端分离版/CFNext-后端Worker版.js from PAICNI/CFNext@$SOURCE_BRANCH"
+          git commit -m "chore: sync 前后端分离版/CFNext-前端Pages版.zip from PAICNI/CFNext@$SOURCE_BRANCH"
           git push
