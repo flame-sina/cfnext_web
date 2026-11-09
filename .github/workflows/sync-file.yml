@@ -1,10 +1,10 @@
-name: Sync Single File to Repo Root
+name: Sync Single File from Upstream
 
 on:
   schedule:
-    # 每天 02:00 UTC = 北京时间 10:00
+    # 每天 02:00 UTC 运行，Asia/Shanghai = 10:00
     - cron: '0 2 * * *'
-  workflow_dispatch:
+  workflow_dispatch:   # 手动触发
 
 jobs:
   sync:
@@ -24,22 +24,27 @@ jobs:
           SOURCE_REPO: CFNext
           SOURCE_BRANCH: main
           SOURCE_PATH: 前后端分离版/CFNext-后端Worker版.js
-          TARGET_PATH: /CFNext-后端Worker版.js   # ← 根目录
+          TARGET_DIR: /
+          TARGET_PATH: /CFNext-后端Worker版.js
         run: |
           set -e
+          mkdir -p "$(dirname "$TARGET_PATH")"
+
+          # 用 git clone 只取一个分支，省流量且能正确处理中文文件名
           TMP=$(mktemp -d)
           git clone --depth 1 --branch "$SOURCE_BRANCH" "https://github.com/$SOURCE_OWNER/$SOURCE_REPO.git" "$TMP"
-
+          
+          # 校验文件存在
           if [ ! -f "$TMP/$SOURCE_PATH" ]; then
-            echo "找不到文件: $SOURCE_PATH"
-            find "$TMP" -maxdepth 3 -type f -print | head -n 200
+            echo "文件不存在: $SOURCE_PATH"
+            find "$TMP" -type f | head -n 200
             exit 1
           fi
 
-          mkdir -p "$(dirname "$TARGET_PATH")"
           cp "$TMP/$SOURCE_PATH" "$TARGET_PATH"
           echo "已复制 $SOURCE_PATH -> $TARGET_PATH"
 
+          # 可选：生成校验和，方便判断是否真的变化
           sha256sum "$TARGET_PATH" > "$TARGET_PATH.sha256"
 
       - name: Commit if changed
@@ -47,11 +52,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add "$TARGET_PATH" "$TARGET_PATH.sha256"
+          git add /
           if git diff --cached --quiet; then
-            echo "文件未变化，跳过提交"
+            echo "无变化，跳过提交"
             exit 0
           fi
 
-          git commit -m "chore: sync CFNext-前端Pages版.zip from PAICNI/CFNext@$SOURCE_BRANCH"
+          git commit -m "chore: sync 前后端分离版/CFNext-后端Worker版.js from PAICNI/CFNext@$SOURCE_BRANCH"
           git push
