@@ -24,8 +24,8 @@ jobs:
           SOURCE_REPO: CFNext
           SOURCE_BRANCH: main
           SOURCE_PATH: 前后端分离版/CFNext-后端Worker版.js
-          TARGET_DIR: mirror
-          TARGET_PATH: mirror/CFNext-后端Worker版.js
+          TARGET_DIR: 
+          TARGET_PATH: CFNext-后端Worker版.js
         run: |
           set -e
           mkdir -p "$(dirname "$TARGET_PATH")"
