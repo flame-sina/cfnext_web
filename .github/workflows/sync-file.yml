@@ -24,7 +24,7 @@ jobs:
           SOURCE_REPO: CFNext
           SOURCE_BRANCH: main
           SOURCE_PATH: 前后端分离版/CFNext-后端Worker版.js
-          TARGET_PATH: CFNext-后端Worker版.js   # ← 根目录
+          TARGET_PATH: /CFNext-后端Worker版.js   # ← 根目录
         run: |
           set -e
           TMP=$(mktemp -d)
