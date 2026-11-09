@@ -1,0 +1,82 @@
+name: Sync upstream web zip
+
+on:
+  schedule:
+    # 每天 UTC 02:00，即北京时间 10:00
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-web
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download upstream zip
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/upstream
+          URL='https://raw.githubusercontent.com/PAICNI/CFNext/main/%E5%89%8D%E5%90%8E%E7%AB%AF%E5%88%86%E7%A6%BB%E7%89%88/CFNext-%E5%89%8D%E7%AB%AFPages%E7%89%88.zip'
+          curl -L --fail --retry 3 --retry-delay 2 -o /tmp/upstream/web.zip "$URL"
+          unzip -tq /tmp/upstream/web.zip
+
+      - name: Unzip and locate index.html
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/upstream/unzipped
+          mkdir -p /tmp/upstream/unzipped
+          unzip -q /tmp/upstream/web.zip -d /tmp/upstream/unzipped
+
+          # 如果 zip 根目录就是 index.html，直接使用根目录；
+          # 如果 zip 内套了一层目录，则自动找到 index.html 所在目录。
+          if [ -f /tmp/upstream/unzipped/index.html ]; then
+            SRC_DIR=/tmp/upstream/unzipped
+          else
+            SRC_DIR=$(find /tmp/upstream/unzipped -name index.html -printf '%h\n' | head -n 1)
+          fi
+
+          if [ -z "${SRC_DIR:-}" ] || [ ! -f "$SRC_DIR/index.html" ]; then
+            echo "::error::zip 内没有找到 index.html，无法同步"
+            exit 1
+          fi
+
+          echo "SRC_DIR=$SRC_DIR" >> "$GITHUB_ENV"
+
+      - name: Sync into web/
+        run: |
+          set -euo pipefail
+          rm -rf web
+          mkdir -p web
+          cp -a "$SRC_DIR"/. web/
+          rm -rf web/__MACOSX
+          test -f web/index.html
+
+      - name: Commit and push
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git add -A -- web
+
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "上游内容无变化，跳过提交"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git commit -m "chore: sync web from upstream zip"
+          git push
